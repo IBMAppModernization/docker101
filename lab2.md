@@ -40,7 +40,7 @@ Username:
 3. Save your docker username into a variable, so that you can copy/paste the rest of the commands for this lab. Replace the command below with your username.
 
 ```
-$ export DOCKER_USER=<docker username>
+$ export DOCKER_USER=[docker username]
 ```
 
 # Step 1: Create a python app (without using Docker)
