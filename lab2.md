@@ -105,10 +105,10 @@ And there you have it: a very simple Dockerfile. A full list of commands you can
 
 2. Build the docker image. 
 
-Pass in `-t` to name your image `$DOCKER_USER/python-hello-world`.
+Pass in `-t` to name your image `$DOCKER_USER/python-hello-world`, with the tag `v1` to indicate this is the first version of the image
 
 ```sh
-$ docker image build -t $DOCKER_USER/python-hello-world .
+$ docker image build -t $DOCKER_USER/python-hello-world:v1 .
 Sending build context to Docker daemon  3.072kB
 Step 1/4 : FROM python:3.6.1-alpine
 3.6.1-alpine: Pulling from library/python
@@ -177,7 +177,7 @@ $ export UNIQUE_PORT=50${USER: -2}
 
 1. Run the Docker image
 ```sh
-$ docker run --name python-$DOCKER_USER -p $UNIQUE_PORT:5000 -d $DOCKER_USER/python-hello-world
+$ docker run --name python-$DOCKER_USER: -p $UNIQUE_PORT:5000 -d $DOCKER_USER/python-hello-world:v1
 0b2ba61df37fb4038d9ae5d145740c63c2c211ae2729fc27dc01b82b5aaafa26
 ```
 
@@ -198,8 +198,13 @@ If you want to see logs from your application you can use the `docker container 
 
 ```sh
 $ docker container logs python-$DOCKER_USER 
+ * Serving Flask app "app" (lazy loading)
+ * Environment: production
+   WARNING: This is a development server. Do not use it in a production deployment.
+   Use a production WSGI server instead.
+ * Debug mode: off
  * Running on http://0.0.0.0:5000/ (Press CTRL+C to quit)
-172.17.0.1 - - [28/Jun/2017 19:35:33] "GET / HTTP/1.1" 200 -
+172.17.0.1 - - [30/Jul/2019 02:02:46] "GET / HTTP/1.1" 200 
 ```
 
 Finally, clean up your image
@@ -217,7 +222,7 @@ The Dockerfile is how you create reproducible builds for your application. A com
 Once we have a properly tagged image, we can use the `docker push` command to push our image to the Docker Hub registry.
 
 ```sh
-$ docker push $DOCKER_USER/python-hello-world
+$ docker push $DOCKER_USER/python-hello-world:v1
 The push refers to a repository [docker.io/jzaccone/python-hello-world]
 2bce026769ac: Pushed 
 64d445ecbe93: Pushed 
@@ -259,13 +264,13 @@ if __name__ == "__main__":
 
 2. Rebuild your image
 
-Now that your app is updated, you need repeat the steps above to rebuild your app and push it to the Docker Hub registry.
+Now that your app is updated, you need repeat the steps above to rebuild your app and push it to the Docker Hub registry. This time we are going we are going to give the n
 
 First rebuild, this time use your Docker Hub username in the build command.:
 
 
 ```sh
-$  docker image build -t $DOCKER_USER/python-hello-world .
+$  docker image build -t $DOCKER_USER/python-hello-world:v2 .
 Sending build context to Docker daemon  3.072kB
 Step 1/4 : FROM python:3.6.1-alpine
  ---> c86415c03c37
@@ -287,15 +292,16 @@ Notice the "Using cache" for steps 1-3. These layers of the Docker Image have al
 3. Test your image locally. 
 
 ```sh
-$ docker run -p $UNIQUE_PORT:5000 -d $DOCKER_USER/python-hello-world
+$ docker run -p $UNIQUE_PORT:5000 -d $DOCKER_USER/python-hello-world:v2
 0b2ba61df37fb4038d9ae5d145740c63c2c211ae2729fc27dc01b82b5aaafa26
+
 $ curl http://localhost:$UNIQUE_PORT
-interesting message here!
+hello beatiful world!
 ```
 
 4. Finally re-push your image to Docker Hub
 ```sh
-$ docker push $DOCKER_USER/python-hello-world
+$ docker push $DOCKER_USER/python-hello-world:v2
 The push refers to a repository [docker.io/jzaccone/python-hello-world]
 94525867566e: Pushed 
 64d445ecbe93: Layer already exists 
