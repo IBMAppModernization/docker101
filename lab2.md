@@ -10,13 +10,38 @@ The information contained in these materials is provided for informational purpo
 
 # Overview
 
-In this lab, we build on our knowledge from lab 1 where we used Docker commands to run containers. We will create a custom Docker Image built from a Dockerfile. Once we build the image, we will push it to a central registry where it can be pulled to be deployed on other environments. Also, we will briefly describe image layers, and how Docker incorporates "copy-on-write" and the union file system to efficiently store images and run containers.
+In this lab, we will create a custom Docker Image built from a Dockerfile. Once we build the image, we will push it to a central registry where it can be pulled to be deployed on other environments. Also, we will briefly describe image layers, and how Docker incorporates "copy-on-write" and the union file system to efficiently store images and run containers.
 
 We will be using a few Docker commands in this lab. For full documentation on available commands check out the [official documentation](https://docs.docker.com/).
 
 ## Prerequisites
 
-You must have docker installed, or be using https://www.katacoda.com/courses/docker/playground.
+You must have access to an environment with docker installed, such as a provided wetty environment through a workshop.
+
+
+### Login to Docker Hub
+
+1. Navigate to https://hub.docker.com and create an account if you haven't already
+
+For this lab we will be using the docker hub as our central registry. Docker hub is a free service to store publicly available images, or you can pay to store private images. Go to the [DockerHub](https://hub.docker.com) website and create a free account.
+
+Most organizations that use docker heavily will set up their own registry internally. To simplify things, we will be using the Docker Hub, but the following concepts apply to any registry.
+
+2. Login
+
+You can log into the docker registry account by typing `docker login` on your terminal.
+
+``` 
+$ docker login
+Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
+Username: 
+```
+
+3. Save your docker username into a variable, so that you can copy/paste the rest of the commands for this lab
+
+```
+$ export DOCKER_USER=<docker username>
+```
 
 # Step 1: Create a python app (without using Docker)
 
@@ -36,31 +61,6 @@ if __name__ == "__main__":
 ```
 
 This is a simple python app that uses flask to expose a http web server on port 5000 (5000 is the default port for flask). Don't worry if you are not too familiar with python or flask, these concepts can be applied to an application written in any language.
-
-**Optional:** If you have python and pip installed, you can run this app locally. If not, move on to the next step.
-
-```sh
-$ python3 --version
-Python 3.6.1
-$ pip3 --version
-pip 9.0.1 from /usr/local/lib/python3.6/site-packages (python 3.6)
-$ pip3 install flask
-Requirement already satisfied: flask in /usr/local/lib/python3.6/site-packages
-Requirement already satisfied: Werkzeug>=0.7 in /usr/local/lib/python3.6/site-packages (from flask)
-Requirement already satisfied: itsdangerous>=0.21 in /usr/local/lib/python3.6/site-packages (from flask)
-Requirement already satisfied: Jinja2>=2.4 in /usr/local/lib/python3.6/site-packages (from flask)
-Requirement already satisfied: click>=2.0 in /usr/local/lib/python3.6/site-packages (from flask)
-Requirement already satisfied: MarkupSafe>=0.23 in /usr/local/lib/python3.6/site-packages (from Jinja2>=2.4->flask)
-johns-mbp:test johnzaccone$ pip3 install flask
-Requirement already satisfied: flask in /usr/local/lib/python3.6/site-packages
-Requirement already satisfied: itsdangerous>=0.21 in /usr/local/lib/python3.6/site-packages (from flask)
-Requirement already satisfied: Jinja2>=2.4 in /usr/local/lib/python3.6/site-packages (from flask)
-Requirement already satisfied: click>=2.0 in /usr/local/lib/python3.6/site-packages (from flask)
-Requirement already satisfied: Werkzeug>=0.7 in /usr/local/lib/python3.6/site-packages (from flask)
-Requirement already satisfied: MarkupSafe>=0.23 in /usr/local/lib/python3.6/site-packages (from Jinja2>=2.4->flask)
-$ python3 app.py 
- * Running on http://0.0.0.0:5000/ (Press CTRL+C to quit)
-```
 
 # Step 2: Create and build the Docker Image
 
@@ -105,10 +105,10 @@ And there you have it: a very simple Dockerfile. A full list of commands you can
 
 2. Build the docker image. 
 
-Pass in `-t` to name your image `python-hello-world`.
+Pass in `-t` to name your image `$DOCKER_USER/python-hello-world`.
 
 ```sh
-$ docker image build -t python-hello-world .
+$ docker image build -t $DOCKER_USER/python-hello-world .
 Sending build context to Docker daemon  3.072kB
 Step 1/4 : FROM python:3.6.1-alpine
 3.6.1-alpine: Pulling from library/python
@@ -160,7 +160,7 @@ Successfully tagged python-hello-world:latest
 Verify that your image shows up in your image list via `docker image ls`.
 
 ```sh
-$ docker image ls
+$ docker image ls | grep $DOCKER_USER
 REPOSITORY           TAG                 IMAGE ID            CREATED             SIZE
 python-hello-world   latest              f1b2781b3111        26 seconds ago      99.3MB
 python               3.6.1-alpine        c86415c03c37        8 days ago          88.7MB
@@ -170,29 +170,36 @@ Notice that your base image, python:3.6.1-alpine, is also in your list.
 
 # Step 3: Run the Docker image
 
-Now that you have built the image, you can run it to see that it works.
+Now that you have built the image, you can run it to see that it works. Before we run the image, we will need to generate a unique port to avoid conflicting with other workshop participants. Run the following command to creat a unique port based on your wetty usernmae
+```sh
+$ export UNIQUE_PORT=50${USER: -2}
+```
 
 1. Run the Docker image
 ```sh
-$ docker run -p 5001:5000 -d python-hello-world
+$ docker run -p $UNIQUE_PORT:5000 -d $DOCKER_USER/python-hello-world
 0b2ba61df37fb4038d9ae5d145740c63c2c211ae2729fc27dc01b82b5aaafa26
 ```
 
-The `-p` flag maps a port running inside the container to your host. In this case, we are mapping the python app running on port 5000 inside the container, to port 5001 on your host. Note that if port 5001 is already in use by another application on your host, you may have to replace 5001 with another value, such as 5002.
+The `-p` flag maps a port running inside the container to your host. In this case, we are mapping the python app running on port 5000 inside the container, to an external port on your host. 
 
-2. Navigate to http://localhost:5001 in a browser to see the results. 
+2. curl `http://localhost:<unique port>` to see the results. 
 
-If you are using katacoda, click on the link in the left-hand pane that says: View port at https://....environments.katacoda.com" then type in 5001 and click "Display Port". 
+```
+$ curl http://localhost:$UNIQUE_PORT
+hello world
+```
 
-In play-with-docker, click the link `5001` that should appear near the top of your session. If all else fails: `curl localhost:5001` works...
-
-You should see "hello world!" on your browser.
+You should see "hello world!" in your terminal.
 
 3. Check the log output of the container.
 
 If you want to see logs from your application you can use the `docker container logs` command. By default, `docker container logs` prints out what is sent to standard out by your application. Use `docker container ls` to find the id for your running container.
 
 ```sh
+$ docker container ls | grep $DOCKER_USER
+ba303a0af7fc        jzaccone/python-hello-world   "python app.py"     4 minutes ago       Up 4 minutes        0.0.0.0:5001->5000/tcp   nervous_hamilton
+
 $ docker container logs [container id] 
  * Running on http://0.0.0.0:5000/ (Press CTRL+C to quit)
 172.17.0.1 - - [28/Jun/2017 19:35:33] "GET / HTTP/1.1" 200 -
@@ -203,36 +210,12 @@ The Dockerfile is how you create reproducible builds for your application. A com
 
 # Step 4: Push to a central registry
 
-1. Navigate to https://hub.docker.com and create an account if you haven't already
-
-For this lab we will be using the docker hub as our central registry. Docker hub is a free service to store publicly available images, or you can pay to store private images. Go to the [DockerHub](https://hub.docker.com) website and create a free account.
-
-Most organizations that use docker heavily will set up their own registry internally. To simplify things, we will be using the Docker Hub, but the following concepts apply to any registry.
-
-2. Login
-
-You can log into the docker registry account by typing `docker login` on your terminal.
-
-``` 
-$ docker login
-Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
-Username: 
-```
-
-2. Tag your image with your username
-
-The Docker Hub naming convention is to tag your image with [dockerhub username]/[image name]. To do this, we are going to tag our previously created image `python-hello-world` to fit that format.
-
-```sh
-$ docker tag python-hello-world [dockerhub username]/python-hello-world
-```
-
-3. Push your image to the registry
+1. Push your image to the Dockerhub registry
 
 Once we have a properly tagged image, we can use the `docker push` command to push our image to the Docker Hub registry.
 
 ```sh
-$ docker push [dockerhub username]/python-hello-world
+$ docker push $DOCKER_USER/python-hello-world
 The push refers to a repository [docker.io/jzaccone/python-hello-world]
 2bce026769ac: Pushed 
 64d445ecbe93: Pushed 
@@ -253,11 +236,11 @@ Now that your image is on Docker Hub, other developers and operations can use th
 **Note:** Docker images contain all the dependencies that it needs to run an application within the image. This is useful because we no longer have deal with environment drift (version differences) when we rely on dependencies that are install on every environment we deploy to. We also don't have to go through additional steps to provision these environments. Just one step: install docker, and you are good to go.
 
 # Step 5: Deploying a Change
-The "hello world!" application is overrated, let's update the app so that it says "Hello Beautiful World!" instead.
+The "hello world!" application is overrated, let's update the app so that it says something a little more interesting.
 
 1. Update `app.py`
 
-Replace the string "Hello World" with "Hello Beautiful World!" in `app.py`. You can update the file with the following command. (copy-paste the entire code block)
+Replace the string "Hello World" with some interesting string in `app.py`. You can update the file with the following command. (copy-paste the entire code block)
 
 ```bash
 echo 'from flask import Flask
@@ -266,7 +249,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def hello():
-    return "hello beautiful world!"
+    return "MY INTERSTING STRING!"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0")' > app.py
@@ -280,7 +263,7 @@ First rebuild, this time use your Docker Hub username in the build command.:
 
 
 ```sh
-$  docker image build -t [dockerhub username]/python-hello-world .
+$  docker image build -t $DOCKER_USER/python-hello-world .
 Sending build context to Docker daemon  3.072kB
 Step 1/4 : FROM python:3.6.1-alpine
  ---> c86415c03c37
@@ -299,8 +282,31 @@ Successfully tagged jzaccone/python-hello-world:latest
 
 Notice the "Using cache" for steps 1-3. These layers of the Docker Image have already been built and `docker image build` will use these layers from the cache instead of rebuilding them.
 
+3. Test your image locally. 
+
+First get the container ID for your running container
+
 ```sh
-$ docker push [dockerhub username]/python-hello-world
+$  docker container ls | grep $DOCKER_USER
+dfc3c5332cf0        jzaccone/python-hello-world   "python app.py"     4 minutes ago       Up 4 minutes        0.0.0.0:5040->5000/tcp   festive_kilby
+```
+
+Then remove it. Replace the following ID with the ID for your container.
+```sh
+$ docker container rm -f dfc3c5332cf0
+```
+
+Now retest the new container
+
+```sh
+$ docker run -p $UNIQUE_PORT:5000 -d $DOCKER_USER/python-hello-world
+0b2ba61df37fb4038d9ae5d145740c63c2c211ae2729fc27dc01b82b5aaafa26
+$ curl http://localhost:$UNIQUE_PORT
+interesting message here!
+```
+
+```sh
+$ docker push $DOCKER_USER/python-hello-world
 The push refers to a repository [docker.io/jzaccone/python-hello-world]
 94525867566e: Pushed 
 64d445ecbe93: Layer already exists 
@@ -315,6 +321,8 @@ latest: digest: sha256:91874e88c14f217b4cab1dd5510da307bf7d9364bd39860c9cc868857
 There is a caching mechanism in place for pushing layers too. Docker Hub already has all but one of the layers from an earlier push, so it only pushes the one layer that has changed.
 
 When you change a layer, every layer built on top of that will have to be rebuilt. Each line in a Dockerfile builds a new layer that is built on the layer created from the lines before it. This is why the order of the lines in our Dockerfile is important. We optimized our Dockerfile so that the layer that is most likely to change (`COPY app.py /app.py`) is the last line of the Dockerfile. Generally for an application, your code changes at the most frequent rate. This optimization is particularly important for CI/CD processes, where you want your automation to run as fast as possible.
+
+
 
 # Step 6: Understanding Image Layers
 
@@ -351,7 +359,7 @@ You may notice that there are duplicate lines in this Dockerfile and the Dockerf
 
 Image layering enables the docker caching mechanism for builds and pushes. For example, the output for your last `docker push` shows that some of the layers of your image already exists on the Docker Hub.
 ```sh
-$ docker push [dockerhub username]/python-hello-world
+$ docker push $DOCKER_USER/python-hello-world
 The push refers to a repository [docker.io/jzaccone/python-hello-world]
 94525867566e: Pushed 
 64d445ecbe93: Layer already exists 
@@ -366,7 +374,7 @@ latest: digest: sha256:91874e88c14f217b4cab1dd5510da307bf7d9364bd39860c9cc868857
 To look more closely at layers, you can use the `docker image history` command of the python image we created.
 
 ```sh
-$ docker image history python-hello-world
+$ docker image history $DOCKER_USER/python-hello-world
 IMAGE               CREATED             CREATED BY                                      SIZE                COMMENT
 f1b2781b3111        5 minutes ago       /bin/sh -c #(nop) COPY file:0114358808a1bb...   159B                
 0ab91286958b        5 minutes ago       /bin/sh -c #(nop)  CMD ["python" "app.py"]      0B                  
@@ -387,41 +395,6 @@ c86415c03c37        8 days ago          /bin/sh -c #(nop)  CMD ["python3"]      
 
 Each line represents a layer of the image. You'll notice that the top lines match to your Dockerfile that you created, and the lines below are pulled from the parent python image. Don't worry about the "\<missing\>" tags. These are still normal layers; they have just not been given an ID by the docker system.
 
-# Step 7: Clean up
-
-Completing this lab results in a bunch of running containers on your host. Let's clean these up.
-
-1. Run `docker container stop [container id]` for each container that is running
-
-First get a list of the containers running using `docker container ls`.
-```sh
-$ docker container ls
-CONTAINER ID        IMAGE                COMMAND             CREATED             STATUS              PORTS                    NAMES
-0b2ba61df37f        python-hello-world   "python app.py"     7 minutes ago       Up 7 minutes        0.0.0.0:5001->5000/tcp   practical_kirch
-```
-Then run `docker container stop [container id]` for each container in the list.
-```sh
-$ docker container stop 0b2
-0b2
-```
-
-2. Remove the stopped containers
-
-`docker system prune` is a really handy command to clean up your system. It will remove any stopped containers, unused volumes and networks, and dangling images.
-
-```sh
-$ docker system prune
-WARNING! This will remove:
-        - all stopped containers
-        - all volumes not used by at least one container
-        - all networks not used by at least one container
-        - all dangling images
-Are you sure you want to continue? [y/N] y
-Deleted Containers:
-0b2ba61df37fb4038d9ae5d145740c63c2c211ae2729fc27dc01b82b5aaafa26
-
-Total reclaimed space: 300.3kB
-```
 
 # Summary
 
