@@ -37,7 +37,7 @@ Login with your Docker ID to push and pull images from Docker Hub. If you don't 
 Username: 
 ```
 
-3. Save your docker username into a variable, so that you can copy/paste the rest of the commands for this lab
+3. Save your docker username into a variable, so that you can copy/paste the rest of the commands for this lab. Replace the command below with your username.
 
 ```
 $ export DOCKER_USER=<docker username>
@@ -177,7 +177,7 @@ $ export UNIQUE_PORT=50${USER: -2}
 
 1. Run the Docker image
 ```sh
-$ docker run -p $UNIQUE_PORT:5000 -d $DOCKER_USER/python-hello-world
+$ docker run --name python-$DOCKER_USER -p $UNIQUE_PORT:5000 -d $DOCKER_USER/python-hello-world
 0b2ba61df37fb4038d9ae5d145740c63c2c211ae2729fc27dc01b82b5aaafa26
 ```
 
@@ -197,12 +197,14 @@ You should see "hello world!" in your terminal.
 If you want to see logs from your application you can use the `docker container logs` command. By default, `docker container logs` prints out what is sent to standard out by your application. Use `docker container ls` to find the id for your running container.
 
 ```sh
-$ docker container ls | grep $DOCKER_USER
-ba303a0af7fc        jzaccone/python-hello-world   "python app.py"     4 minutes ago       Up 4 minutes        0.0.0.0:5001->5000/tcp   nervous_hamilton
-
-$ docker container logs [container id] 
+$ docker container logs python-$DOCKER_USER 
  * Running on http://0.0.0.0:5000/ (Press CTRL+C to quit)
 172.17.0.1 - - [28/Jun/2017 19:35:33] "GET / HTTP/1.1" 200 -
+```
+
+Finally, clean up your image
+```sh
+$ docker container rm -f python-$DOCKER_USER
 ```
 
 The Dockerfile is how you create reproducible builds for your application. A common workflow is to have your CI/CD automation run `docker image build` as part of its build process. Once images are built, they will be sent to a central registry, where it can be accessed by all environments (such as a test environment) that need to run instances of that application. In the next step, we will push our custom image to the public docker registry: the docker hub, where it can be consumed by other developers and operators.
@@ -236,11 +238,11 @@ Now that your image is on Docker Hub, other developers and operations can use th
 **Note:** Docker images contain all the dependencies that it needs to run an application within the image. This is useful because we no longer have deal with environment drift (version differences) when we rely on dependencies that are install on every environment we deploy to. We also don't have to go through additional steps to provision these environments. Just one step: install docker, and you are good to go.
 
 # Step 5: Deploying a Change
-The "hello world!" application is overrated, let's update the app so that it says something a little more interesting.
+The "hello world!" application is overrated, let's update the app so that it says "hello beautiful world".
 
 1. Update `app.py`
 
-Replace the string "Hello World" with some interesting string in `app.py`. You can update the file with the following command. (copy-paste the entire code block)
+Update the file with the following command. (copy-paste the entire code block)
 
 ```bash
 echo 'from flask import Flask
@@ -249,13 +251,13 @@ app = Flask(__name__)
 
 @app.route("/")
 def hello():
-    return "MY INTERSTING STRING!"
+    return "hello beautiful world!"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0")' > app.py
 ```
 
-2. Rebuild and push your image
+2. Rebuild your image
 
 Now that your app is updated, you need repeat the steps above to rebuild your app and push it to the Docker Hub registry.
 
@@ -284,20 +286,6 @@ Notice the "Using cache" for steps 1-3. These layers of the Docker Image have al
 
 3. Test your image locally. 
 
-First get the container ID for your running container
-
-```sh
-$  docker container ls | grep $DOCKER_USER
-dfc3c5332cf0        jzaccone/python-hello-world   "python app.py"     4 minutes ago       Up 4 minutes        0.0.0.0:5040->5000/tcp   festive_kilby
-```
-
-Then remove it. Replace the following ID with the ID for your container.
-```sh
-$ docker container rm -f dfc3c5332cf0
-```
-
-Now retest the new container
-
 ```sh
 $ docker run -p $UNIQUE_PORT:5000 -d $DOCKER_USER/python-hello-world
 0b2ba61df37fb4038d9ae5d145740c63c2c211ae2729fc27dc01b82b5aaafa26
@@ -305,6 +293,7 @@ $ curl http://localhost:$UNIQUE_PORT
 interesting message here!
 ```
 
+4. Finally re-push your image to Docker Hub
 ```sh
 $ docker push $DOCKER_USER/python-hello-world
 The push refers to a repository [docker.io/jzaccone/python-hello-world]
