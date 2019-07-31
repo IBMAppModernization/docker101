@@ -27,21 +27,22 @@ For this lab we will be using the docker hub as our central registry. Docker hub
 
 Most organizations that use docker heavily will set up their own registry internally. To simplify things, we will be using the Docker Hub, but the following concepts apply to any registry.
 
+3. Save your DockerHub username into a variable, so that you can copy/paste the rest of the commands for this lab. Replace the command below with your username.
+
+```
+$ export DOCKER_USER=[docker username]
+```
+
 2. Login
 
 You can log into the docker registry account by typing `docker login` on your terminal.
 
 ``` 
-$ docker login
-Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
-Username: 
+$ docker login -u $DOCKER_USER
+Password:
 ```
 
-3. Save your docker username into a variable, so that you can copy/paste the rest of the commands for this lab. Replace the command below with your username.
 
-```
-$ export DOCKER_USER=[docker username]
-```
 
 # Step 1: Create a python app (without using Docker)
 
@@ -157,16 +158,12 @@ Successfully built f1b2781b3111
 Successfully tagged python-hello-world:latest
 ```
 
-Verify that your image shows up in your image list via `docker image ls`.
+Verify that your image shows up in your image list via `docker image ls | grep $DOCKER_USEr`.
 
 ```sh
 $ docker image ls | grep $DOCKER_USER
-REPOSITORY           TAG                 IMAGE ID            CREATED             SIZE
-python-hello-world   latest              f1b2781b3111        26 seconds ago      99.3MB
-python               3.6.1-alpine        c86415c03c37        8 days ago          88.7MB
+jzaccone/python-hello-world                                                                                                                                       v1                  7feaf028e337        9 seconds ago       98.7MB
 ```
-
-Notice that your base image, python:3.6.1-alpine, is also in your list.
 
 # Step 3: Run the Docker image
 
@@ -177,7 +174,7 @@ $ export UNIQUE_PORT=50${USER: -2}
 
 1. Run the Docker image
 ```sh
-$ docker run --name python-$DOCKER_USER: -p $UNIQUE_PORT:5000 -d $DOCKER_USER/python-hello-world:v1
+$ docker run --name python-$DOCKER_USER -p $UNIQUE_PORT:5000 -d $DOCKER_USER/python-hello-world:v1
 0b2ba61df37fb4038d9ae5d145740c63c2c211ae2729fc27dc01b82b5aaafa26
 ```
 
