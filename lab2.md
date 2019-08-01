@@ -366,7 +366,7 @@ latest: digest: sha256:91874e88c14f217b4cab1dd5510da307bf7d9364bd39860c9cc868857
 To look more closely at layers, you can use the `docker image history` command of the python image we created.
 
 ```sh
-$ docker image history $DOCKER_USER/python-hello-world
+$ docker image history $DOCKER_USER/python-hello-world:v1
 IMAGE               CREATED             CREATED BY                                      SIZE                COMMENT
 f1b2781b3111        5 minutes ago       /bin/sh -c #(nop) COPY file:0114358808a1bb...   159B                
 0ab91286958b        5 minutes ago       /bin/sh -c #(nop)  CMD ["python" "app.py"]      0B                  
