@@ -1,3 +1,5 @@
+**NOTA BENE: this repo has MOVED to [https://github.com/IBM/docker101](https://github.com/IBM/docker101)**
+
 # intro-to-docker-lab
 
 This is the repository of the labs for the Intro to Docker developerWorks course.
